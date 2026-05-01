@@ -1,11 +1,11 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-import os
+from pathlib import Path
 
-np.random.seed(42)
 
-def generate_data():
+def generate_data(seed=42, output_dir=None):
+    rng = np.random.default_rng(seed)
     num_meters = 20
     days = 7
     intervals_per_day = 24 * 4
@@ -18,11 +18,19 @@ def generate_data():
     base_lng = 77.5946
     
     meter_ids = [f"M{i:02d}" for i in range(1, num_meters + 1)]
-    meter_lats = np.random.normal(base_lat, 0.002, num_meters)
-    meter_lngs = np.random.normal(base_lng, 0.002, num_meters)
+    cluster_half_width_m = 240
+    lat_delta = cluster_half_width_m / 111_320
+    lng_delta = cluster_half_width_m / (111_320 * np.cos(np.radians(base_lat)))
+    meter_lats = base_lat + rng.uniform(-lat_delta, lat_delta, num_meters)
+    meter_lngs = base_lng + rng.uniform(-lng_delta, lng_delta, num_meters)
     
-    profiles = np.random.choice(['low', 'medium', 'high'], num_meters)
-    profile_multipliers = {'low': 0.5, 'medium': 1.0, 'high': 1.8}
+    profiles = np.array([
+        'low', 'medium', 'low', 'medium', 'medium',
+        'low', 'high', 'medium', 'low', 'medium',
+        'low', 'medium', 'medium', 'low', 'medium',
+        'medium', 'low', 'medium', 'low', 'high'
+    ])
+    profile_multipliers = {'low': 0.55, 'medium': 1.0, 'high': 2.8}
     
     records = []
     feeder_totals = {ts: 0.0 for ts in timestamps}
@@ -31,21 +39,18 @@ def generate_data():
         mult = profile_multipliers[profiles[i]]
         
         for t_idx, ts in enumerate(timestamps):
-            hour = ts.hour
-            base_kwh = 0.1 * mult
-            
-            # Peaks: 6-10 AM and 6-11 PM (18-23)
-            if 6 <= hour < 10:
-                base_kwh += np.random.normal(0.4, 0.1) * mult
-            elif 18 <= hour < 23:
-                base_kwh += np.random.normal(0.6, 0.15) * mult
-            else:
-                base_kwh += np.random.normal(0.05, 0.02) * mult
-            
-            true_kwh = max(0.0, base_kwh)
-            meter_kwh = true_kwh
-            
+            hour = ts.hour + ts.minute / 60
             day_idx = t_idx // intervals_per_day
+
+            daily_wave = 0.12 * np.sin(2 * np.pi * (hour - 6) / 24)
+            weekly_wave = 0.05 * np.sin(2 * np.pi * day_idx / 7)
+            morning_peak = np.exp(-((hour - 8) ** 2) / (2 * 1.35 ** 2))
+            evening_peak = np.exp(-((hour - 20.5) ** 2) / (2 * 1.9 ** 2))
+
+            base_kwh = 0.12 * mult
+            pattern = 0.72 + daily_wave + weekly_wave + 1.55 * morning_peak + 2.1 * evening_peak
+            true_kwh = max(0.0, base_kwh * pattern + rng.normal(0, 0.015 * mult))
+            meter_kwh = true_kwh
             
             # Anomalies
             # M07 bypass Day 4 (Day idx 3)
@@ -76,7 +81,7 @@ def generate_data():
     for ts in timestamps:
         true_total = feeder_totals[ts]
         # add 4-7% technical loss
-        loss_pct = np.random.uniform(0.04, 0.07)
+        loss_pct = rng.uniform(0.04, 0.07)
         feeder_kwh = true_total * (1 + loss_pct)
         feeder_records.append({
             'timestamp': ts.strftime('%Y-%m-%d %H:%M:%S'),
@@ -87,9 +92,10 @@ def generate_data():
     df_meters = pd.DataFrame(records)
     df_feeder = pd.DataFrame(feeder_records)
     
-    os.makedirs('data', exist_ok=True)
-    df_meters.to_csv('data/meters.csv', index=False)
-    df_feeder.to_csv('data/feeder_input.csv', index=False)
+    data_dir = Path(output_dir) if output_dir else Path(__file__).resolve().parent
+    data_dir.mkdir(parents=True, exist_ok=True)
+    df_meters.to_csv(data_dir / 'meters.csv', index=False)
+    df_feeder.to_csv(data_dir / 'feeder_input.csv', index=False)
     print("Generated meters.csv and feeder_input.csv")
 
 if __name__ == '__main__':

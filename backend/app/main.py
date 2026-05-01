@@ -47,9 +47,7 @@ def get_feeder_readings(feeder_id: str, start: Optional[str] = None, end: Option
         if end:
             try:
                 end_dt = pd.to_datetime(end)
-                if len(end) == 10: # YYYY-MM-DD
-                    end_dt = end_dt.replace(hour=23, minute=59, second=59)
-                df_filtered = df_filtered[df_filtered['ts_dt'] <= end_dt]
+                df_filtered = df_filtered[df_filtered['ts_dt'] < end_dt]
             except Exception:
                 raise HTTPException(status_code=422, detail="Invalid end date format")
         df_filtered = df_filtered.drop(columns=['ts_dt'])
