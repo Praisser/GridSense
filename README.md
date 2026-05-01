@@ -1,2 +1,1 @@
-# GridSense
-Feeder-Level  Loss Intelligence for Smart Meter Networks
+GridSense — AI-powered electricity loss intelligence platform
