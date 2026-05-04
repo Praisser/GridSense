@@ -409,7 +409,7 @@ function App() {
 
             {settingsOpen && (
               <div
-                className="absolute right-0 top-full mt-2 w-52 rounded-lg p-3 z-[1100] fade-in"
+                className="fixed top-14 right-4 mt-1 w-52 rounded-lg p-3 z-[9999] fade-in"
                 style={{
                   background: "var(--bg-elevated)",
                   border: "1px solid var(--border-default)",
