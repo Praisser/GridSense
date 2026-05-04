@@ -72,11 +72,12 @@ const ConfidenceGauge = ({ confidence }) => {
  *   onClose: () => void,
  * }} props
  */
-const MeterDrawer = ({ meterId, alert: selectedAlert, onClose }) => {
+const MeterDrawer = ({ meterId, alert: selectedAlert, onClose, onAlertAction }) => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [actionMessage, setActionMessage] = useState("");
+  const [actionLoading, setActionLoading] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
   const isOpen = Boolean(meterId);
   const alert = selectedAlert ?? null;
@@ -107,9 +108,19 @@ const MeterDrawer = ({ meterId, alert: selectedAlert, onClose }) => {
   const lossType = alert?.loss_type ?? "none";
   const meta = getLossMeta(lossType);
 
-  const handleAction = (action) => {
-    console.log(`[GridSense] ${action}`, { meterId });
-    setActionMessage(`${action} recorded for ${meterId}.`);
+  const handleAction = async (actionType) => {
+    if (!meterId || actionLoading) return;
+    setActionLoading(actionType);
+    try {
+      await client.post(`/api/alerts/${meterId}/${actionType}`);
+      const label = actionType === "inspect" ? "Marked for inspection" : "Dismissed as false positive";
+      setActionMessage(`${label}.`);
+      onAlertAction?.();
+    } catch {
+      setActionMessage("Action failed. Please try again.");
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   return (
@@ -312,28 +323,30 @@ const MeterDrawer = ({ meterId, alert: selectedAlert, onClose }) => {
                   <div className="flex flex-col gap-2">
                     <button
                       type="button"
-                      onClick={() => handleAction("Inspection mark")}
-                      className="w-full py-2.5 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all"
+                      onClick={() => handleAction("inspect")}
+                      disabled={!!actionLoading || selectedAlert?.status === "inspecting"}
+                      className="w-full py-2.5 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                       style={{ background: "var(--accent)", color: "#fff" }}
                     >
                       <CheckCircle2 className="w-4 h-4" />
-                      Mark for Inspection
+                      {actionLoading === "inspect" ? "Marking…" : selectedAlert?.status === "inspecting" ? "Inspecting" : "Mark for Inspection"}
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleAction("False positive dismissal")}
-                      className="w-full py-2.5 rounded-md text-sm font-medium transition-all"
+                      onClick={() => handleAction("dismiss")}
+                      disabled={!!actionLoading || selectedAlert?.status === "dismissed"}
+                      className="w-full py-2.5 rounded-md text-sm font-medium transition-all disabled:opacity-50"
                       style={{
                         background: "transparent",
                         color: "var(--text-secondary)",
                         border: "1px solid var(--border-default)",
                       }}
                     >
-                      Dismiss as False Positive
+                      {actionLoading === "dismiss" ? "Dismissing…" : selectedAlert?.status === "dismissed" ? "Dismissed" : "Dismiss as False Positive"}
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleAction("Notes request")}
+                      onClick={() => setActionMessage("Notes feature coming soon.")}
                       className="w-full py-2 text-sm transition-colors flex items-center justify-center gap-1.5"
                       style={{ color: "var(--text-tertiary)" }}
                     >

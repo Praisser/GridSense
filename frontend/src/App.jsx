@@ -191,6 +191,11 @@ function App() {
     [alerts],
   );
 
+  const openAlertCount = useMemo(
+    () => alerts.filter((a) => (a.status ?? "open") === "open").length,
+    [alerts],
+  );
+
   const lastUpdatedLabel = lastUpdated
     ? lastUpdated.toLocaleTimeString([], {
         hour: "2-digit",
@@ -332,11 +337,11 @@ function App() {
               <span style={{ color: "var(--text-tertiary)" }}>ALERTS </span>
               <span
                 style={{
-                  color: alerts.length > 0 ? "var(--risk-critical)" : "var(--risk-low)",
+                  color: openAlertCount > 0 ? "var(--risk-critical)" : "var(--risk-low)",
                   fontWeight: 600,
                 }}
               >
-                {alerts.length}
+                {openAlertCount}
               </span>
             </span>
             <span>
@@ -524,6 +529,7 @@ function App() {
           meterId={selectedMeter}
           alert={selectedAlert}
           onClose={() => setSelectedMeter(null)}
+          onAlertAction={() => refreshAlerts({ silent: true })}
         />
 
         <SimulationModal
