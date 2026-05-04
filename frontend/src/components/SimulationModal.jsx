@@ -8,6 +8,10 @@ const THEFT_TYPES = [
   { id: "faulty",    label: "Faulty" },
 ];
 
+const FALLBACK_METERS = Array.from({ length: 20 }, (_, i) => ({
+  meter_id: `M${String(i + 1).padStart(2, "0")}`,
+}));
+
 const FormField = ({ label, children }) => (
   <div className="flex flex-col gap-2">
     <label
@@ -28,22 +32,25 @@ const FormField = ({ label, children }) => (
  * }} props
  */
 export default function SimulationModal({ isOpen, onClose, onSimulationSuccess }) {
-  const [meters, setMeters] = useState([]);
+  const [meters, setMeters] = useState(FALLBACK_METERS);
   const [selectedMeter, setSelectedMeter] = useState("M03");
   const [theftType, setTheftType] = useState("bypass");
   const [intensity, setIntensity] = useState(0.6);
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [simError, setSimError] = useState(null);
 
   useEffect(() => {
     if (!isOpen) return;
+    setSimError(null);
     client.get("/api/meters")
-      .then((r) => setMeters(r.data))
+      .then((r) => { if (r.data?.length) setMeters(r.data); })
       .catch(() => {});
   }, [isOpen]);
 
   const handleRunSimulation = async () => {
     setLoading(true);
+    setSimError(null);
     try {
       await client.post("/api/simulate/theft", {
         meter_id: selectedMeter,
@@ -57,7 +64,7 @@ export default function SimulationModal({ isOpen, onClose, onSimulationSuccess }
       });
       onClose();
     } catch {
-      alert("Failed to run simulation");
+      setSimError("Simulation failed — is the backend running?");
     } finally {
       setLoading(false);
     }
@@ -65,6 +72,7 @@ export default function SimulationModal({ isOpen, onClose, onSimulationSuccess }
 
   const handleReset = async () => {
     setResetting(true);
+    setSimError(null);
     try {
       await client.post("/api/simulate/reset");
       onSimulationSuccess({
@@ -73,7 +81,7 @@ export default function SimulationModal({ isOpen, onClose, onSimulationSuccess }
       });
       onClose();
     } catch {
-      alert("Failed to reset simulation");
+      setSimError("Reset failed — is the backend running?");
     } finally {
       setResetting(false);
     }
@@ -196,6 +204,18 @@ export default function SimulationModal({ isOpen, onClose, onSimulationSuccess }
           className="px-6 py-4 flex flex-col gap-2.5"
           style={{ borderTop: "1px solid var(--border-subtle)", background: "var(--bg-elevated)" }}
         >
+          {simError && (
+            <p
+              className="text-xs font-medium px-3 py-2 rounded-md"
+              style={{
+                background: "var(--bg-base)",
+                borderLeft: "3px solid var(--risk-critical)",
+                color: "var(--risk-critical)",
+              }}
+            >
+              {simError}
+            </p>
+          )}
           <button
             type="button"
             onClick={handleRunSimulation}
