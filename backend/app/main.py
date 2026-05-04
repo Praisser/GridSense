@@ -22,6 +22,7 @@ _simulation_window_readings = 48
 _simulation_baseline_meters_df: Optional[pd.DataFrame] = None
 _active_simulations: Dict[str, SimulationRequest] = {}
 _simulation_events: List[Dict[str, Any]] = []
+_alert_statuses: Dict[str, str] = {}  # meter_id -> "open"|"inspecting"|"dismissed"|"resolved"
 
 logger = logging.getLogger("gridsense.simulation")
 
@@ -312,12 +313,49 @@ def get_feeder_readings(
 
 @app.get("/api/alerts", response_model=List[Alert])
 def get_alerts(limit: int = Query(10, gt=0)):
-    # Handle direct calls from tests where FastAPI doesn't inject the value
     try:
         actual_limit = int(limit)
     except (TypeError, ValueError):
         actual_limit = 10
-    return _cached_alerts[:actual_limit]
+    result = []
+    for a in _cached_alerts[:actual_limit]:
+        d = a.model_dump()
+        d["status"] = _alert_statuses.get(a.meter_id, "open")
+        result.append(Alert(**d))
+    return result
+
+
+@app.post("/api/alerts/{meter_id}/inspect")
+def inspect_alert(meter_id: str):
+    alert = next((a for a in _cached_alerts if a.meter_id == meter_id), None)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    _alert_statuses[meter_id] = "inspecting"
+    d = alert.model_dump()
+    d["status"] = "inspecting"
+    return {"status": "ok", "alert": Alert(**d)}
+
+
+@app.post("/api/alerts/{meter_id}/dismiss")
+def dismiss_alert(meter_id: str):
+    alert = next((a for a in _cached_alerts if a.meter_id == meter_id), None)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    _alert_statuses[meter_id] = "dismissed"
+    d = alert.model_dump()
+    d["status"] = "dismissed"
+    return {"status": "ok", "alert": Alert(**d)}
+
+
+@app.post("/api/alerts/{meter_id}/resolve")
+def resolve_alert(meter_id: str):
+    alert = next((a for a in _cached_alerts if a.meter_id == meter_id), None)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    _alert_statuses[meter_id] = "resolved"
+    d = alert.model_dump()
+    d["status"] = "resolved"
+    return {"status": "ok", "alert": Alert(**d)}
 
 
 @app.get("/api/alerts/{meter_id}", response_model=Alert)
