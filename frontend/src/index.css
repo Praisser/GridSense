@@ -1,3 +1,326 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+/* ── Design Tokens ─────────────────────────────────────────── */
+:root {
+  /* Background layers */
+  --bg-base:     #0A0E13;
+  --bg-surface:  #11161D;
+  --bg-elevated: #1A2029;
+  --bg-overlay:  rgba(10, 14, 19, 0.85);
+
+  /* Borders */
+  --border-subtle:   rgba(255, 255, 255, 0.06);
+  --border-default:  rgba(255, 255, 255, 0.10);
+  --border-emphasis: rgba(255, 255, 255, 0.18);
+
+  /* Text */
+  --text-primary:   #E8EBED;
+  --text-secondary: #9BA3AB;
+  --text-tertiary:  #5E6770;
+  --text-disabled:  #3A4148;
+
+  /* Status / risk */
+  --risk-critical: #FF4D4F;
+  --risk-high:     #FF8C42;
+  --risk-moderate: #FFC53D;
+  --risk-low:      #52C41A;
+  --info:          #4DABF7;
+  --accent:        #C1440E;
+
+  /* Motion */
+  --ease-out-expo:   cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-micro:  120ms;
+  --duration-short:  200ms;
+  --duration-long:   320ms;
+
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Tailwind v4 theme extensions ──────────────────────────── */
+@theme inline {
+  /* Surface colors */
+  --color-bg-base:     var(--bg-base);
+  --color-bg-surface:  var(--bg-surface);
+  --color-bg-elevated: var(--bg-elevated);
+
+  /* Risk / status colors */
+  --color-risk-critical: var(--risk-critical);
+  --color-risk-high:     var(--risk-high);
+  --color-risk-moderate: var(--risk-moderate);
+  --color-risk-low:      var(--risk-low);
+  --color-info:          var(--info);
+  --color-accent:        var(--accent);
+
+  /* Text colors */
+  --color-text-primary:   var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary:  var(--text-tertiary);
+  --color-text-disabled:  var(--text-disabled);
+
+  /* Typography — overrides Tailwind defaults */
+  --font-family-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-family-sans: 'Inter', system-ui, sans-serif;
+  --font-family-ui:   'Inter', system-ui, sans-serif;
+}
+
+/* ── Light theme overrides ─────────────────────────────────── */
+[data-theme="light"] {
+  --bg-base:     #F0F2F5;
+  --bg-surface:  #FFFFFF;
+  --bg-elevated: #F8FAFB;
+  --bg-overlay:  rgba(240, 242, 245, 0.92);
+
+  --border-subtle:   rgba(0, 0, 0, 0.06);
+  --border-default:  rgba(0, 0, 0, 0.10);
+  --border-emphasis: rgba(0, 0, 0, 0.18);
+
+  --text-primary:   #0D1117;
+  --text-secondary: #4B5563;
+  --text-tertiary:  #9CA3AF;
+  --text-disabled:  #D1D5DB;
+
+  --risk-critical: #DC2626;
+  --risk-high:     #EA580C;
+  --risk-moderate: #D97706;
+  --risk-low:      #16A34A;
+  --info:          #0284C7;
+
+  color-scheme: light;
+}
+
+/* ── Global base ───────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* Leaflet inherits our font stack */
+.leaflet-container {
+  font-family: inherit;
+  background: var(--bg-base);
+}
+
+/* ── Focus ring ────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Scrollbars ────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--border-emphasis); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* ── Keyframes ─────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from { transform: translateY(1rem); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(1.5rem); opacity: 0; }
+  to   { transform: translateX(0);      opacity: 1; }
+}
+
+@keyframes slideInTop {
+  from { transform: translateY(-1rem); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.97); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+/* New alert: slide-in from top + red glow pulse */
+@keyframes alertAppear {
+  0%   { opacity: 0; transform: translateY(-0.5rem); box-shadow: 0 0 0 transparent; }
+  40%  { opacity: 1; transform: translateY(0);       box-shadow: 0 0 16px rgba(255,77,79,0.35); }
+  100% { opacity: 1; transform: translateY(0);       box-shadow: 0 0 0 transparent; }
+}
+
+/* Map marker ripple ring */
+@keyframes markerRipple {
+  0%   { transform: scale(1);   opacity: 0.7; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* Pulsing status dot */
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+
+/* Count-up pop */
+@keyframes countUp {
+  from { transform: translateY(0.25rem); opacity: 0; }
+  to   { transform: translateY(0);       opacity: 1; }
+}
+
+/* ── Animation utility classes ─────────────────────────────── */
+.animate-in {
+  animation-fill-mode: both;
+}
+
+.fade-in           { animation: fadeIn          var(--duration-long) var(--ease-out-expo) both; }
+.slide-in-up       { animation: slideInUp       var(--duration-short) var(--ease-out-expo) both; }
+.slide-in-right    { animation: slideInRight    var(--duration-short) var(--ease-out-expo) both; }
+.slide-in-top      { animation: slideInTop      var(--duration-short) var(--ease-out-expo) both; }
+.zoom-in           { animation: zoomIn          var(--duration-short) var(--ease-out-expo) both; }
+.slide-in-from-bottom-4 { animation: slideInUp var(--duration-short) var(--ease-out-expo) both; }
+
+.alert-card-new {
+  animation: alertAppear var(--duration-long) var(--ease-out-expo) both;
+}
+
+/* ── Skeleton shimmer ──────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 0%,
+    var(--bg-elevated) 50%,
+    var(--bg-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+  border-radius: 4px;
+}
+
+/* ── Custom map markers ────────────────────────────────────── */
+.gs-marker-wrap {
+  position: relative;
+  width: 28px;
+  height: 28px;
+}
+.gs-marker-ring {
+  position: absolute;
+  inset: 0;
+  width: 24px;
+  height: 24px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid var(--mc, #52C41A);
+}
+.gs-marker-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--mc, #52C41A);
+  opacity: 0.85;
+}
+.gs-marker-selected-ring {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px dashed var(--mc, #52C41A);
+  opacity: 0.9;
+}
+.gs-marker-pulse-ring {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1.5px solid var(--mc, #FF4D4F);
+  animation: gsMarkerRipple 1.6s var(--ease-out-expo) infinite;
+  pointer-events: none;
+}
+@keyframes gsMarkerRipple {
+  0%   { width: 24px; height: 24px; opacity: 0.7; }
+  100% { width: 48px; height: 48px; opacity: 0; }
+}
+.gs-substation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Override default Leaflet chrome with dark equivalents */
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-bottom-color: var(--border-subtle);
+}
+.leaflet-bar a:hover {
+  background: var(--bg-surface);
+}
+.leaflet-touch .leaflet-bar a {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+.leaflet-tooltip {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-default) !important;
+  color: var(--text-primary) !important;
+  border-radius: 6px !important;
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+}
+.leaflet-tooltip::before {
+  border-top-color: var(--border-default) !important;
+}
+
+/* ── Reduced motion ────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .fade-in,
+  .slide-in-up,
+  .slide-in-right,
+  .slide-in-top,
+  .zoom-in,
+  .slide-in-from-bottom-4,
+  .alert-card-new,
+  .skeleton {
+    animation: none;
+  }
+}

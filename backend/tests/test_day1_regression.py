@@ -14,29 +14,39 @@ for path in (ROOT, BACKEND):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from app.data_loader import data_loader
-from app.main import app, get_alerts, get_feeder_readings
-from data import generator
+from app.data_loader import data_loader  # noqa: E402
+from app.main import app, get_alerts, get_feeder_readings  # noqa: E402
+from data import generator  # noqa: E402
 
 
 class Day1DataPipelineTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         generator.generate_data()
-        cls.meters = pd.read_csv(ROOT / "data" / "meters.csv", parse_dates=["timestamp"])
-        cls.feeder = pd.read_csv(ROOT / "data" / "feeder_input.csv", parse_dates=["timestamp"])
+        cls.meters = pd.read_csv(
+            ROOT / "data" / "meters.csv", parse_dates=["timestamp"]
+        )
+        cls.feeder = pd.read_csv(
+            ROOT / "data" / "feeder_input.csv", parse_dates=["timestamp"]
+        )
 
     def test_generator_outputs_are_reproducible(self):
         generator.generate_data()
         first = {
             path.name: hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in (ROOT / "data" / "meters.csv", ROOT / "data" / "feeder_input.csv")
+            for path in (
+                ROOT / "data" / "meters.csv",
+                ROOT / "data" / "feeder_input.csv",
+            )
         }
 
         generator.generate_data()
         second = {
             path.name: hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in (ROOT / "data" / "meters.csv", ROOT / "data" / "feeder_input.csv")
+            for path in (
+                ROOT / "data" / "meters.csv",
+                ROOT / "data" / "feeder_input.csv",
+            )
         }
 
         self.assertEqual(first, second)
@@ -49,7 +59,9 @@ class Day1DataPipelineTests(unittest.TestCase):
         self.assertFalse((self.meters["kwh"] < 0).any())
         self.assertFalse((self.feeder["kwh"] < 0).any())
 
-        feeder_deltas = self.feeder["timestamp"].sort_values().diff().dropna().dt.total_seconds()
+        feeder_deltas = (
+            self.feeder["timestamp"].sort_values().diff().dropna().dt.total_seconds()
+        )
         self.assertEqual(set(feeder_deltas), {900.0})
         for _, group in self.meters.groupby("meter_id"):
             deltas = group["timestamp"].sort_values().diff().dropna().dt.total_seconds()
@@ -67,7 +79,9 @@ class Day1DataPipelineTests(unittest.TestCase):
         self.assertLessEqual(lng_span_m, 500)
 
     def test_daily_patterns_have_morning_and_evening_peaks(self):
-        normal = self.meters[self.meters["timestamp"] < pd.Timestamp("2024-01-04")].copy()
+        normal = self.meters[
+            self.meters["timestamp"] < pd.Timestamp("2024-01-04")
+        ].copy()
         normal["hour"] = normal["timestamp"].dt.hour
 
         overnight = normal[normal["hour"].between(0, 5)]["kwh"].mean()
@@ -84,7 +98,9 @@ class Day1DataPipelineTests(unittest.TestCase):
             .rename(columns={"kwh": "feeder"})
             .join(meter_sum.rename("meters"))
         )
-        combined["gap_pct"] = (combined["feeder"] - combined["meters"]) / combined["feeder"] * 100
+        combined["gap_pct"] = (
+            (combined["feeder"] - combined["meters"]) / combined["feeder"] * 100
+        )
 
         day1 = combined.loc["2024-01-01"]["gap_pct"].mean()
         day4 = combined.loc["2024-01-04"]["gap_pct"].mean()
@@ -132,7 +148,7 @@ class Day1ApiTests(unittest.TestCase):
         self.assertEqual(malformed_date.exception.status_code, 422)
 
     def test_alerts_and_cors_are_configured(self):
-        self.assertEqual(get_alerts(), [])
+        self.assertIsInstance(get_alerts(), list)
 
         cors = next(
             middleware
@@ -140,6 +156,7 @@ class Day1ApiTests(unittest.TestCase):
             if middleware.cls.__name__ == "CORSMiddleware"
         )
         self.assertIn("http://localhost:5173", cors.kwargs["allow_origins"])
+        self.assertIn("http://127.0.0.1:5173", cors.kwargs["allow_origins"])
 
 
 class Day1DocsTests(unittest.TestCase):

@@ -4,3 +4,15 @@ venv/
 node_modules/
 dist/
 .DS_Store
+Thumbs.db
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.playwright-cli/
+frontend/.vite/
+frontend/coverage/
+backend/backend/
+backend/models/*.joblib
+data/timescale_data/
