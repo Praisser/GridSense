@@ -74,6 +74,7 @@ const ConfidenceGauge = ({ confidence }) => {
  */
 const MeterDrawer = ({ meterId, alert: selectedAlert, onClose, onAlertAction }) => {
   const [history, setHistory] = useState([]);
+  const [forecast, setForecast] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [actionMessage, setActionMessage] = useState("");
@@ -90,11 +91,16 @@ const MeterDrawer = ({ meterId, alert: selectedAlert, onClose, onAlertAction }) 
         setLoading(true);
         setError(null);
         setActionMessage("");
-        const res = await client.get(`/api/meters/${meterId}/history`);
-        setHistory(res.data);
+        const [histRes, fcastRes] = await Promise.all([
+          client.get(`/api/meters/${meterId}/history`),
+          client.get(`/api/meters/${meterId}/forecast?horizons=48`),
+        ]);
+        setHistory(histRes.data);
+        setForecast(fcastRes.data);
       } catch {
         setError("Could not load meter details.");
         setHistory([]);
+        setForecast([]);
       } finally {
         setLoading(false);
       }
@@ -105,6 +111,20 @@ const MeterDrawer = ({ meterId, alert: selectedAlert, onClose, onAlertAction }) 
   }, [meterId, reloadKey]);
 
   const historyRows = useMemo(() => buildMeterTrendRows(history), [history]);
+
+  const forecastRows = useMemo(() =>
+    forecast.map((r) => ({
+      ...r,
+      kwh: Number(r.kwh),
+      displayTime: new Date(r.timestamp).toLocaleString([], {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+      }),
+    })),
+    [forecast],
+  );
+
   const lossType = alert?.loss_type ?? "none";
   const meta = getLossMeta(lossType);
 
@@ -297,7 +317,27 @@ const MeterDrawer = ({ meterId, alert: selectedAlert, onClose, onAlertAction }) 
                   />
                 </section>
 
-                {/* Section 5 — Recommended Action */}
+                {/* Section 5 — Consumption Forecast */}
+                <section>
+                  <p
+                    className="text-[10px] uppercase font-bold tracking-widest mb-3"
+                    style={{ color: "var(--text-tertiary)" }}
+                  >
+                    Consumption Forecast (next 12h)
+                  </p>
+                  <MiniChart
+                    rows={forecastRows}
+                    dataKey="kwh"
+                    color="var(--risk-moderate)"
+                    emptyText="Forecast unavailable."
+                    showArea
+                  />
+                  <p className="text-[10px] mt-1.5" style={{ color: "var(--text-tertiary)" }}>
+                    Projected from historical daily pattern. Anomalies indicate active theft signals.
+                  </p>
+                </section>
+
+                {/* Section 6 — Recommended Action */}
                 <section>
                   <p
                     className="text-[10px] uppercase font-bold tracking-widest mb-3"

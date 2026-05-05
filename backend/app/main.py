@@ -415,3 +415,44 @@ def get_meter_history(meter_id: str):
         raise HTTPException(status_code=404, detail="Meter not found")
 
     return df.to_dict(orient="records")
+
+
+@app.get("/api/meters/{meter_id}/forecast")
+def get_meter_forecast(meter_id: str, horizons: int = Query(48, gt=0, le=192)):
+    if data_loader.meters_df is None or data_loader.meters_df.empty:
+        raise HTTPException(status_code=404, detail="No meter data available")
+
+    df = data_loader.meters_df[data_loader.meters_df["meter_id"] == meter_id].copy()
+    if df.empty:
+        raise HTTPException(status_code=404, detail="Meter not found")
+
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df = df.sort_values("timestamp")
+    kwh_series = pd.to_numeric(df["kwh"], errors="coerce").fillna(0.0)
+
+    # Build a daily pattern (96 × 15-min slots) from available history
+    period = 96
+    window = min(period * 7, len(kwh_series))
+    baseline = kwh_series.iloc[-window:]
+    daily_pattern = [
+        float(baseline.iloc[i::period].mean()) for i in range(period)
+    ]
+
+    last_ts = df["timestamp"].iloc[-1]
+    last_pos = len(baseline) % period
+
+    forecasts = []
+    for i in range(1, horizons + 1):
+        ts = last_ts + pd.Timedelta(minutes=15 * i)
+        projected_kwh = round(daily_pattern[(last_pos + i) % period], 4)
+        forecasts.append({
+            "timestamp": ts.strftime("%Y-%m-%d %H:%M:%S"),
+            "meter_id": meter_id,
+            "feeder_id": None,
+            "kwh": projected_kwh,
+            "lat": None,
+            "lng": None,
+            "is_forecast": True,
+        })
+
+    return forecasts
