@@ -87,8 +87,14 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [theme, setTheme] = useState("dark");
+  const [currentTime, setCurrentTime] = useState(() => new Date());
   const settingsRef = useRef(null);
   const previousAlertsRef = useRef([]);
+
+  useEffect(() => {
+    const id = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const refreshInterval = getDashboardRefreshInterval(isDemoMode);
 
@@ -203,6 +209,13 @@ function App() {
         second: "2-digit",
       })
     : "—";
+
+  const currentTimeLabel = currentTime.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
 
   if (alertsLoading && !lastUpdated) {
     return (
@@ -357,8 +370,16 @@ function App() {
               </span>
             </span>
             <span style={{ color: "var(--border-emphasis)" }}>|</span>
-            <span style={{ color: "var(--text-tertiary)" }}>
-              {lastUpdatedLabel}
+            <span className="flex items-center gap-1.5" style={{ color: "var(--text-tertiary)" }}>
+              <span
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{
+                  background: "var(--risk-low)",
+                  boxShadow: "0 0 4px var(--risk-low)",
+                  animation: "statusPulse 2s ease-in-out infinite",
+                }}
+              />
+              {currentTimeLabel}
             </span>
           </div>
 
