@@ -55,8 +55,12 @@ cd backend
 python -m venv venv
 source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
+export DATABASE_URL="postgresql://gridsense:gridsense@localhost:55432/gridsense"
 python -m uvicorn app.main:app --reload --port 8000
 ```
+
+> **Note:** The `DATABASE_URL` export is required at runtime. Copy `backend/.env.example` to `backend/.env` to persist it.
+> The app works from the bundled CSV data without Docker; Docker only enables TimescaleDB features.
 
 ### 3. Setup Frontend
 > Open a **new terminal window** (the backend server must stay running in the first one).
