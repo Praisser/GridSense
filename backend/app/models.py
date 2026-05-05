@@ -21,6 +21,7 @@ class Alert(BaseModel):
     last_anomaly_at: str
     total_kwh_lost: float
     composite_score: float
+    status: str = "open"
 
 
 class Meter(BaseModel):

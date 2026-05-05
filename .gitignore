@@ -16,3 +16,16 @@ frontend/coverage/
 backend/backend/
 backend/models/*.joblib
 data/timescale_data/
+
+# Development planning docs (not part of submission)
+day1_scaffolding_and_data.md
+day2_ai_detection_logic.md
+day3_react_dashboard.md
+day4_polish_and_simulation.md
+day5_video_and_submission.md
+design_revamp_brief.md
+round2_aggressive_plan.md
+finalization_checklist.md
+forward_fix_runbook.md
+pre_submission_audit.md
+ui_fix_brief.md

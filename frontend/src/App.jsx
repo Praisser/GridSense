@@ -87,8 +87,14 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [theme, setTheme] = useState("dark");
+  const [currentTime, setCurrentTime] = useState(() => new Date());
   const settingsRef = useRef(null);
   const previousAlertsRef = useRef([]);
+
+  useEffect(() => {
+    const id = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const refreshInterval = getDashboardRefreshInterval(isDemoMode);
 
@@ -191,6 +197,11 @@ function App() {
     [alerts],
   );
 
+  const openAlertCount = useMemo(
+    () => alerts.filter((a) => (a.status ?? "open") === "open").length,
+    [alerts],
+  );
+
   const lastUpdatedLabel = lastUpdated
     ? lastUpdated.toLocaleTimeString([], {
         hour: "2-digit",
@@ -198,6 +209,13 @@ function App() {
         second: "2-digit",
       })
     : "—";
+
+  const currentTimeLabel = currentTime.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
 
   if (alertsLoading && !lastUpdated) {
     return (
@@ -332,11 +350,11 @@ function App() {
               <span style={{ color: "var(--text-tertiary)" }}>ALERTS </span>
               <span
                 style={{
-                  color: alerts.length > 0 ? "var(--risk-critical)" : "var(--risk-low)",
+                  color: openAlertCount > 0 ? "var(--risk-critical)" : "var(--risk-low)",
                   fontWeight: 600,
                 }}
               >
-                {alerts.length}
+                {openAlertCount}
               </span>
             </span>
             <span>
@@ -352,8 +370,16 @@ function App() {
               </span>
             </span>
             <span style={{ color: "var(--border-emphasis)" }}>|</span>
-            <span style={{ color: "var(--text-tertiary)" }}>
-              {lastUpdatedLabel}
+            <span className="flex items-center gap-1.5" style={{ color: "var(--text-tertiary)" }}>
+              <span
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{
+                  background: "var(--risk-low)",
+                  boxShadow: "0 0 4px var(--risk-low)",
+                  animation: "statusPulse 2s ease-in-out infinite",
+                }}
+              />
+              {currentTimeLabel}
             </span>
           </div>
 
@@ -404,7 +430,7 @@ function App() {
 
             {settingsOpen && (
               <div
-                className="absolute right-0 top-full mt-2 w-52 rounded-lg p-3 z-[1100] fade-in"
+                className="fixed top-14 right-4 mt-1 w-52 rounded-lg p-3 z-[9999] fade-in"
                 style={{
                   background: "var(--bg-elevated)",
                   border: "1px solid var(--border-default)",
@@ -524,6 +550,7 @@ function App() {
           meterId={selectedMeter}
           alert={selectedAlert}
           onClose={() => setSelectedMeter(null)}
+          onAlertAction={() => refreshAlerts({ silent: true })}
         />
 
         <SimulationModal

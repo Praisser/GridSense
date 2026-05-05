@@ -2,18 +2,28 @@ import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshCcw } from "lucide-react";
 import { formatRelativeTime, getLossMeta } from "../utils/dashboardData";
 
-const RISK_FILTERS = [
-  { id: "all",      label: "All" },
-  { id: "critical", label: "Critical" },
-  { id: "high",     label: "High" },
-  { id: "moderate", label: "Moderate" },
+const STATUS_FILTERS = [
+  { id: "open",       label: "Open" },
+  { id: "critical",   label: "Critical" },
+  { id: "inspecting", label: "Inspecting" },
+  { id: "dismissed",  label: "Dismissed" },
 ];
 
+function getAlertStatus(alert) {
+  return alert.status ?? "open";
+}
+
 function matchesFilter(alert, filterId) {
-  if (filterId === "all") return true;
-  if (filterId === "critical") return alert.loss_type === "bypass_theft";
-  if (filterId === "high")     return alert.loss_type === "meter_tampering";
-  return ["faulty_meter", "other_anomaly"].includes(alert.loss_type);
+  const status = getAlertStatus(alert);
+  if (filterId === "open")       return status === "open";
+  if (filterId === "critical")   return status === "open" && alert.loss_type === "bypass_theft";
+  if (filterId === "inspecting") return status === "inspecting";
+  if (filterId === "dismissed")  return status === "dismissed";
+  return true;
+}
+
+function getFilterCount(alerts, filterId) {
+  return alerts.filter((a) => matchesFilter(a, filterId)).length;
 }
 
 const EMPTY_HIGHLIGHTED_METERS = new Set();
@@ -24,6 +34,8 @@ const AlertCard = forwardRef(function AlertCard(
 ) {
   const meta = getLossMeta(alert.loss_type);
   const confidence = Math.round(alert.confidence * 100);
+  const status = alert.status ?? "open";
+  const statusLabel = status === "inspecting" ? "Inspecting" : status === "dismissed" ? "Dismissed" : null;
 
   return (
     <button
@@ -39,11 +51,12 @@ const AlertCard = forwardRef(function AlertCard(
         borderBottom: `1px solid ${isSelected ? meta.color + "55" : "var(--border-subtle)"}`,
         borderLeft: `${isSelected || isHighlighted ? "4px" : "3px"} solid ${meta.color}`,
         boxShadow: isSelected ? `0 0 0 1px ${meta.color}33` : "none",
+        opacity: status === "dismissed" ? 0.65 : 1,
         transitionDuration: "120ms",
       }}
     >
         <div className="px-4 pt-4 pb-5">
-          {/* Row 1: meter ID + badge */}
+          {/* Row 1: meter ID + badges */}
           <div className="flex items-start justify-between gap-2 mb-3">
             <span
               className="text-sm font-bold font-mono tracking-wide"
@@ -51,16 +64,30 @@ const AlertCard = forwardRef(function AlertCard(
             >
               {alert.meter_id}
             </span>
-            <span
-              className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex-shrink-0"
-              style={{
-                color: meta.color,
-                background: `${meta.color}18`,
-                border: `1px solid ${meta.color}40`,
-              }}
-            >
-              {meta.shortLabel}
-            </span>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {statusLabel && (
+                <span
+                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  style={{
+                    color: status === "inspecting" ? "var(--info)" : "var(--text-tertiary)",
+                    background: status === "inspecting" ? "rgba(77,171,247,0.12)" : "var(--bg-elevated)",
+                    border: `1px solid ${status === "inspecting" ? "rgba(77,171,247,0.3)" : "var(--border-default)"}`,
+                  }}
+                >
+                  {statusLabel}
+                </span>
+              )}
+              <span
+                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                style={{
+                  color: meta.color,
+                  background: `${meta.color}18`,
+                  border: `1px solid ${meta.color}40`,
+                }}
+              >
+                {meta.shortLabel}
+              </span>
+            </div>
           </div>
 
           {/* Row 2: confidence bar */}
@@ -162,7 +189,7 @@ const AlertFeed = ({
   relativeTimeReference,
   selectedMeterId,
 }) => {
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState("open");
   const cardRefs = useRef(new Map());
 
   const filteredAlerts = useMemo(
@@ -201,15 +228,20 @@ const AlertFeed = ({
             >
               Active Alerts
             </h2>
-            <span
-              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full font-mono"
-              style={{
-                background: alerts.length > 0 ? "var(--risk-critical)" : "var(--bg-elevated)",
-                color: alerts.length > 0 ? "#fff" : "var(--text-tertiary)",
-              }}
-            >
-              {alerts.length}
-            </span>
+            {(() => {
+              const openCount = getFilterCount(alerts, "open");
+              return (
+                <span
+                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full font-mono"
+                  style={{
+                    background: openCount > 0 ? "var(--risk-critical)" : "var(--bg-elevated)",
+                    color: openCount > 0 ? "#fff" : "var(--text-tertiary)",
+                  }}
+                >
+                  {openCount}
+                </span>
+              );
+            })()}
           </div>
           <button
             type="button"
@@ -225,21 +257,35 @@ const AlertFeed = ({
 
         {/* Filter chips */}
         <div className="flex gap-1.5 flex-wrap">
-          {RISK_FILTERS.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setActiveFilter(f.id)}
-              className="text-[11px] font-medium px-2.5 py-1 rounded-full transition-all"
-              style={{
-                background: activeFilter === f.id ? "var(--accent)" : "var(--bg-elevated)",
-                color: activeFilter === f.id ? "#fff" : "var(--text-secondary)",
-                border: "1px solid transparent",
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
+          {STATUS_FILTERS.map((f) => {
+            const count = getFilterCount(alerts, f.id);
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setActiveFilter(f.id)}
+                className="text-[11px] font-medium px-2.5 py-1 rounded-full transition-all flex items-center gap-1"
+                style={{
+                  background: activeFilter === f.id ? "var(--accent)" : "var(--bg-elevated)",
+                  color: activeFilter === f.id ? "#fff" : "var(--text-secondary)",
+                  border: "1px solid transparent",
+                }}
+              >
+                {f.label}
+                {count > 0 && (
+                  <span
+                    className="text-[9px] font-bold px-1 rounded-full min-w-[14px] text-center"
+                    style={{
+                      background: activeFilter === f.id ? "rgba(255,255,255,0.25)" : "var(--bg-base)",
+                      color: activeFilter === f.id ? "#fff" : "var(--text-tertiary)",
+                    }}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
