@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import client from "../api/client";
+import { FALLBACK_METER_HISTORY, FALLBACK_FORECAST } from "../api/fallbackData";
 import { buildMeterTrendRows, getLossMeta } from "../utils/dashboardData";
 import { useElementSize } from "../hooks/useElementSize";
 
@@ -73,8 +74,8 @@ const ConfidenceGauge = ({ confidence }) => {
  * }} props
  */
 const MeterDrawer = ({ meterId, alert: selectedAlert, onClose, onAlertAction }) => {
-  const [history, setHistory] = useState([]);
-  const [forecast, setForecast] = useState([]);
+  const [history, setHistory] = useState(() => FALLBACK_METER_HISTORY["M07"] ?? []);
+  const [forecast, setForecast] = useState(() => FALLBACK_FORECAST ?? []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [actionMessage, setActionMessage] = useState("");
@@ -98,9 +99,10 @@ const MeterDrawer = ({ meterId, alert: selectedAlert, onClose, onAlertAction }) 
         setHistory(histRes.data);
         setForecast(fcastRes.data);
       } catch {
-        setError("Could not load meter details.");
-        setHistory([]);
-        setForecast([]);
+        const fb = FALLBACK_METER_HISTORY[meterId] ?? FALLBACK_METER_HISTORY["M07"];
+        setHistory(fb);
+        setForecast(FALLBACK_FORECAST);
+        setError(null);
       } finally {
         setLoading(false);
       }

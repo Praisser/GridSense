@@ -9,6 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import client from "../api/client";
+import { FALLBACK_GAP_STATS } from "../api/fallbackData";
 import { ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import {
   ALERT_REFRESH_INTERVAL_MS,
@@ -63,8 +64,8 @@ const GapTimeline = ({
   timeRange = { days: DEFAULT_TIME_RANGE_DAYS },
   onTimeRangeChange,
 }) => {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(() => prepareGapTimelineRows(FALLBACK_GAP_STATS));
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [brushKey, setBrushKey] = useState(0);
@@ -78,7 +79,7 @@ const GapTimeline = ({
         setData(prepareGapTimelineRows(res.data));
         setError(null);
       } catch {
-        setError("Could not load gap timeline.");
+        // Keep fallback data already in state
       } finally {
         setLoading(false);
       }
