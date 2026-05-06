@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 import logging
 from pathlib import Path
+import threading
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Any, Dict, List, Optional
@@ -191,7 +192,7 @@ def run_detection_pipeline(force: bool = False):
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     data_loader.load_data()
-    run_detection_pipeline()
+    threading.Thread(target=run_detection_pipeline, daemon=True).start()
     yield
 
 
