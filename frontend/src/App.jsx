@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Moon, Settings, Sun, Volume2, VolumeX, Zap } from "lucide-react";
 import client from "./api/client";
+import { FALLBACK_ALERTS, FALLBACK_METERS } from "./api/fallbackData";
 import AlertFeed from "./components/AlertFeed";
 import FeederMap from "./components/FeederMap";
 import GapTimeline from "./components/GapTimeline";
@@ -69,10 +70,10 @@ function Toast({ toast }) {
 function App() {
   const [selectedFeeder, setSelectedFeeder] = useState(DEFAULT_FEEDER_ID);
   const [selectedMeter, setSelectedMeter] = useState(null);
-  const [alerts, setAlerts] = useState([]);
-  const [alertsLoading, setAlertsLoading] = useState(true);
+  const [alerts, setAlerts] = useState(() => normalizeAlerts(FALLBACK_ALERTS));
+  const [alertsLoading, setAlertsLoading] = useState(false);
   const [alertsError, setAlertsError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(() => new Date());
   const [alertTimeReference, setAlertTimeReference] = useState(
     () => new Date(),
   );
@@ -140,7 +141,13 @@ function App() {
         );
         highlightMeters(newAlertIds);
       } catch {
-        setAlertsError("Couldn't reach the backend. Try again?");
+        // Backend unreachable — keep showing whatever data we already have
+        if (!lastUpdated) {
+          const fallback = normalizeAlerts(FALLBACK_ALERTS);
+          setAlerts(fallback);
+          previousAlertsRef.current = fallback;
+          setLastUpdated(new Date());
+        }
       } finally {
         setAlertsLoading(false);
       }

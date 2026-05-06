@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Tooltip, useMap } from "react-leaflet"
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import client from "../api/client";
+import { FALLBACK_METERS } from "../api/fallbackData";
 import { Layers, MapPin } from "lucide-react";
 import {
   ALERT_REFRESH_INTERVAL_MS,
@@ -81,7 +82,7 @@ const FeederMap = ({
   selectedMeterId,
   theme = "dark",
 }) => {
-  const [meters, setMeters] = useState([]);
+  const [meters, setMeters] = useState(FALLBACK_METERS);
   const [mapError, setMapError] = useState(null);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [legendOpen, setLegendOpen] = useState(true);
@@ -99,7 +100,7 @@ const FeederMap = ({
         setMeters(res.data);
         setMapError(null);
       } catch {
-        setMapError("Could not load meter locations.");
+        // Keep fallback meters already in state — don't show error
       }
     };
     const t = window.setTimeout(fetchMeters, 0);
