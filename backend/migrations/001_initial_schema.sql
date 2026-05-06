@@ -67,8 +67,7 @@ CREATE INDEX IF NOT EXISTS idx_alerts_meter_detected
 CREATE INDEX IF NOT EXISTS idx_alerts_status_created
     ON alerts (status, created_at DESC);
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS meter_readings_15min
-WITH (timescaledb.continuous) AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS meter_readings_15min AS
 SELECT
     time_bucket('15 minutes', timestamp) AS bucket,
     meter_id,
