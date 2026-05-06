@@ -4,6 +4,12 @@ GridSense is a specialized analytics engine designed to detect and classify non-
 
 ![GridSense dashboard](docs/dashboard.png)
 
+## Live Demo
+
+**Web app:** https://praisser.github.io/GridSense/
+
+> **Note:** First load may take ~30 seconds while the backend wakes from sleep (free hosting tier). Subsequent interactions are instant. If the backend is slow, hit the page once, wait, then refresh.
+
 ## The Problem
 India loses over ₹26,000 crore annually to electricity theft and non-technical losses. Traditional Advanced Metering Infrastructure (AMI) often fails to detect sophisticated theft because a tampered meter simply looks like a low-consumption customer. Most anomalies go undetected for months until manual field audits are conducted.
 

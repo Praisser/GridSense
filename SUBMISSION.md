@@ -1,15 +1,29 @@
-# GridSense Submission
+# GridSense — Submission
 
-This placeholder is reserved for Day 5 submission details.
+## Deliverable Links
 
-## Deliverables
+- **Live Web App:** https://praisser.github.io/GridSense/
+- **Demo Video (5 min):** _to be added after recording_
+- **Code Repository:** https://github.com/Praisser/GridSense
 
-- Demo video link: _to be added_
-- Live deployment URL: _to be added_
-- Repository URL: _to be added_
+## Quick Start (run locally)
 
-## Submission Notes
+See [README.md](./README.md#quick-start).
 
-- Confirm the final demo script in `docs/demo_script.md`.
-- Record the simulation flow after the final design revamp is complete.
-- Tag the release as `v0.1.0-prototype` after the final commit is verified.
+## Architecture
+
+- Frontend: React + Vite on GitHub Pages
+- Backend: FastAPI on Render (free tier — ~30s cold start after idle)
+- Database: TimescaleDB on Render Postgres
+
+## Known Limitations
+
+See [KNOWN_ISSUES.md](./KNOWN_ISSUES.md).
+
+- In-memory alert statuses reset on backend restart (free tier)
+- Forecast uses pattern-based projection, not a trained LSTM
+- Map tiles require internet connection
+
+## Release Tag
+
+`v1.0.0-prototype-audit-passed`
